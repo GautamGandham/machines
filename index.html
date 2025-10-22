@@ -1,0 +1,355 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+  <title>Vada Dispenser Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #f5f5f5; }
+    .card { display: inline-block; padding: 40px; background: white; border-radius: 15px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); min-width: 400px; max-width: 600px; }
+    .stats { margin: 20px; font-size: 18px; }
+    button { padding: 12px 24px; font-size: 16px; border: none; border-radius: 8px; margin: 8px; background-color: #007BFF; color: white; cursor: pointer; transition: background 0.3s ease; }
+    button:hover { background-color: #0056b3; }
+    #emergencyBtn { background-color: #dc3545; font-weight: bold; }
+    #emergencyBtn:hover { background-color: #a71d2a; }
+    #log { margin-top: 20px; font-family: monospace; background: #eee; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; text-align: left; }
+    input[type="number"] { padding: 8px; font-size: 16px; width: 100px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Vada Dispenser Dashboard</h1>
+    <div class="stats">
+      <p>Oil Temperature: <span id="oilTemp">--</span> °C</p>
+      <p>Dispensed Count: <span id="dispensedCount">--</span></p>
+      <p>ESP32 Status: <span id="esp32Status">--</span></p>
+      <p>Last Update: <span id="lastUpdate">--</span></p>
+    </div>
+
+    <button onclick="sendAction('start')">Start</button>
+    <button onclick="sendAction('stop')">Stop</button>
+    <button onclick="sendAction('RESET')">Reset</button>
+    <button onclick="sendAction('drop-vada')">Drop Vada</button>
+
+    <div style="margin-top:15px;">
+      <input type="number" id="dispenseCount" placeholder="Count" min="1">
+      <button onclick="dispense()">Dispense</button>
+    </div>
+
+    <button id="emergencyBtn" onclick="sendAction('emergency')">🚨 Emergency</button>
+
+    <div id="log">Logs will appear here...</div>
+  </div>
+
+  <script>
+    const BASE_URL = "http://192.168.29.6:1880"; // Replace with your Node-RED IP
+    const logDiv = document.getElementById("log");
+
+    function addLog(message) {
+      const time = new Date().toLocaleTimeString();
+      logDiv.innerHTML += `[${time}] ${message}<br>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    async function sendAction(action) {
+      try {
+        addLog(`Sending POST to ${BASE_URL}/incomingData with payload: {"action":"${action}"}`);
+        const res = await fetch(`${BASE_URL}/incomingData`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action })
+        });
+        const data = await res.json();
+        addLog(`Received response: ${JSON.stringify(data)}`);
+      } catch (err) {
+        addLog(`❌ Error sending action: ${err}`);
+      }
+    }
+
+    async function dispense() {
+      const count = document.getElementById("dispenseCount").value;
+      if (!count || count <= 0) {
+        alert("Please enter a valid count.");
+        return;
+      }
+      try {
+        addLog(`Sending POST to ${BASE_URL}/incomingData with payload: {"action":"dispense","count":${count}}`);
+        const res = await fetch(`${BASE_URL}/incomingData`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "dispense", count: parseInt(count) })
+        });
+        const data = await res.json();
+        addLog(`Received response: ${JSON.stringify(data)}`);
+      } catch (err) {
+        addLog(`❌ Error dispensing: ${err}`);
+      }
+    }
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch(`${BASE_URL}/getTemp`);
+        const text = await res.text();
+
+        let oilTemp = "--";
+        let dispensedCount = "--";
+
+        try {
+          const data = JSON.parse(text);
+          oilTemp = data.oilTemp ?? "--";
+          dispensedCount = data.dispensedCount ?? "--";
+          addLog(`✅ JSON status received: ${text}`);
+        } catch {
+          const match = text.match(/([\d.]+)/);
+          oilTemp = match ? parseFloat(match[1]) : "--";
+          addLog(`⚠️ Text status received: ${text}, parsed oilTemp=${oilTemp}`);
+        }
+
+        document.getElementById("oilTemp").innerText = oilTemp;
+        document.getElementById("dispensedCount").innerText = dispensedCount;
+      } catch (err) {
+        addLog(`❌ Failed to fetch status: ${err}`);
+      }
+    }
+
+    async function fetchEsp32Status() {
+      try {
+        const res = await fetch(`${BASE_URL}/esp32status`);
+        const data = await res.json();
+
+        document.getElementById("esp32Status").innerText = data.esp32Status ?? "--";
+        document.getElementById("lastUpdate").innerText = data.lastUpdate ?? "--";
+
+        addLog(`📡 ESP32 status: ${JSON.stringify(data)}`);
+      } catch (err) {
+        addLog(`❌ Failed to fetch ESP32 status: ${err}`);
+      }
+    }
+
+    // Poll both endpoints every 2 seconds
+    setInterval(fetchStatus, 2000);
+    setInterval(fetchEsp32Status, 2000);
+
+    // Initial calls
+    fetchStatus();
+    fetchEsp32Status();
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+ -->
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vada Dispenser Dashboard</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0; 
+      padding: 0; 
+      background: #f5f5f5; 
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 30px;
+      margin-top: 50px;
+    }
+    .card { 
+      padding: 40px; 
+      background: white; 
+      border-radius: 15px; 
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15); 
+      min-width: 400px; 
+      max-width: 600px; 
+    }
+    .stats { margin: 20px; font-size: 18px; }
+    .stats p { margin: 10px 0; }
+    button { 
+      padding: 12px 24px; 
+      font-size: 16px; 
+      border: none; 
+      border-radius: 8px; 
+      margin: 8px; 
+      background-color: #007BFF; 
+      color: white; 
+      cursor: pointer; 
+      transition: background 0.3s ease; 
+    }
+    button:hover { background-color: #0056b3; }
+    #emergencyBtn { 
+      background-color: #dc3545; 
+      font-weight: bold; 
+      width: 100%;
+    }
+    #emergencyBtn:hover { background-color: #a71d2a; }
+    #logContainer {
+      width: 500px;   
+      max-height: 600px; 
+      overflow-y: auto;
+      background: #eee; 
+      border-radius: 10px; 
+      padding: 15px;
+      font-family: monospace;
+      font-size: 14px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    #logContainer h3 {
+      margin-top: 0;
+      text-align: center;
+    }
+    input[type="number"] { 
+      padding: 8px; 
+      font-size: 16px; 
+      width: 100px; 
+      margin-right: 10px; 
+      border-radius: 5px; 
+      border: 1px solid #ccc; 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Dashboard Card -->
+    <div class="card">
+      <h1>Vada Dispenser Dashboard</h1>
+      <div class="stats">
+        <p>Oil Temperature: <span id="oilTemp">--</span> °C</p>
+        <p>Dispensed Count: <span id="dispensedCount">--</span></p>
+        <p>ESP32 Status: <span id="esp32Status">--</span></p>
+      </div>
+
+      <button onclick="sendAction('stop')">Stop</button>
+      <button onclick="sendAction('RESET')">Reset</button>
+
+      <div style="margin-top:15px;">
+        <input type="number" id="dispenseCount" placeholder="Count" min="1">
+        <button onclick="dispense()">Dispense</button>
+      </div>
+
+      <div style="margin-top:20px;">
+        <button id="emergencyBtn" onclick="sendAction('EMGSTOP')">🚨 Emergency</button>
+      </div>
+    </div>
+
+    <!-- Logs on the side -->
+    <div id="logContainer">
+      <h3>Logs</h3>
+      <div id="log">Logs will appear here...</div>
+    </div>
+  </div>
+
+  <script>
+    const BASE_URL = "http://192.168.29.7:1880"; 
+
+    window.onload = function() {
+      const logDiv = document.getElementById("log");
+      const logContainer = document.getElementById("logContainer");
+
+      let autoScroll = true;
+      let dispensedCountValue = 0;
+
+      logContainer.addEventListener("scroll", () => {
+        const atBottom = logContainer.scrollTop + logContainer.clientHeight >= logContainer.scrollHeight - 5;
+        autoScroll = atBottom; 
+      });
+
+      function addLog(message) {
+        const time = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `[${time}] ${message}<br>`;
+        if (autoScroll) {
+          logContainer.scrollTop = logContainer.scrollHeight;
+        }
+      }
+
+      async function sendAction(action) {
+        try {
+          addLog(`Sending POST to ${BASE_URL}/incomingData with payload: {"action":"${action}"}`);
+          const res = await fetch(`${BASE_URL}/incomingData`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action })
+          });
+          const data = await res.json();
+          addLog(`Received response: ${JSON.stringify(data)}`);
+
+          if (action === "RESET") {
+            dispensedCountValue = 0;
+            document.getElementById("dispensedCount").innerText = dispensedCountValue;
+          }
+        } catch (err) {
+          addLog(`❌ Error sending action: ${err}`);
+        }
+      }
+
+      async function dispense() {
+        const count = document.getElementById("dispenseCount").value;
+        if (!count || count <= 0) {
+          alert("Please enter a valid count.");
+          return;
+        }
+        try {
+          addLog(`Sending POST to ${BASE_URL}/incomingData with payload: {"action":"dispense","count":${count}}`);
+          const res = await fetch(`${BASE_URL}/incomingData`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "dispense", count: parseInt(count) })
+          });
+          const data = await res.json();
+          addLog(`Received response: ${JSON.stringify(data)}`);
+
+          dispensedCountValue += parseInt(count);
+          document.getElementById("dispensedCount").innerText = dispensedCountValue;
+        } catch (err) {
+          addLog(`❌ Error dispensing: ${err}`);
+        }
+      }
+
+      async function fetchEsp32Status() {
+        try {
+          const res = await fetch(`${BASE_URL}/esp32status`);
+          const data = await res.json();
+
+          let oilTemp = "--";
+
+          if (data && data.status) {
+            try {
+              const inner = JSON.parse(data.status);
+              oilTemp = inner.temp ?? "--"; 
+              dispensedCountValue = inner.Completed ?? dispensedCountValue;
+            } catch {
+              oilTemp = "--";
+            }
+
+            document.getElementById("oilTemp").innerText = oilTemp;
+            document.getElementById("dispensedCount").innerText = dispensedCountValue;
+            document.getElementById("esp32Status").innerText = "Ready";
+
+            addLog(`📡 ESP32 status received: ${JSON.stringify(data)}`);
+          } else {
+            document.getElementById("esp32Status").innerText = "Not Ready";
+          }
+        } catch (err) {
+          document.getElementById("esp32Status").innerText = "Not Ready";
+          addLog(`❌ Failed to fetch ESP32 status: ${err}`);
+        }
+      }
+
+      window.sendAction = sendAction;
+      window.dispense = dispense;
+
+      setInterval(fetchEsp32Status, 2000);
+      fetchEsp32Status();
+    }
+  </script>
+</body>
+</html>
